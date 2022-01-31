@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+    <style>
+        body {
+            margin-top: 100px;
+            margin-bottom: 100px;
+            margin-right: 25%;
+            margin-left: 25%;
+        }
+
+        .sb-title {
+            position: relative;
+            top: -12px;
+            font-family: Roboto, sans-serif;
+            font-weight: 500;
+        }
+
+        .sb-title-icon {
+            position: relative;
+            top: -5px;
+        }
+
+        .card-container {
+            display: flex;
+            height: 500px;
+            width: 600px;
+        }
+
+        .panel {
+            background: white;
+            width: 60%;
+            padding: 2px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+        }
+
+        .map {
+            margin-top: 25%;
+            margin-bottom: 0%;
+            margin-right: 0%%;
+            margin-left: 10%;
+            width: 80%;
+        }
+
+        h2 {
+            margin: 0;
+            font-family: Roboto, sans-serif;
+        }
+
+        input {
+            height: 25px;
+        }
+
+        input {
+            margin-top: 20px;
+            width: 300px;
+            border: 1px;
+            border-bottom: 1px solid black;
+            font-size: 14px;
+            font-family: Roboto, sans-serif;
+            font-style: normal;
+            font-weight: normal;
+        }
+
+        input:focus::placeholder {
+            color: white;
+        }
+
+        .button-cta {
+            margin-top: 10%;
+            height: 40px;
+            width: 40%;
+            background: #3367d6;
+            color: white;
+            font-size: 15px;
+            text-transform: uppercase;
+            font-family: Roboto, sans-serif;
+            border: 0;
+            border-radius: 3px;
+            box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.48);
+            cursor: pointer;
+        }
+    </style>
+    <script>
+        "use strict";
+        var lng, lat;
+
+        function initMap() {
+            const componentForm = [
+                'location',
+                'locality',
+                'administrative_area_level_1',
+                'country',
+                'postal_code',
+            ];
+            const map = new google.maps.Map(document.getElementById("map"), {
+                zoom: 12,
+                center: {lat: 21.7679, lng: 78.8718},
+                mapTypeControl: false,
+                fullscreenControl: true,
+                zoomControl: true,
+                streetViewControl: true
+            });
+            const marker = new google.maps.Marker({map: map, draggable: false});
+            const autocompleteInput = document.getElementById('location');
+            const autocomplete = new google.maps.places.Autocomplete(autocompleteInput, {
+                fields: ["address_components", "geometry", "name"],
+                types: ["address"],
+            });
+            autocomplete.addListener('place_changed', function () {
+                marker.setVisible(false);
+                const place = autocomplete.getPlace();
+                if (!place.geometry) {
+                    window.alert('No details available for input: \'' + place.name + '\'');
+                    return;
+                }
+                renderAddress(place);
+                fillInAddress(place);
+            });
+
+            function fillInAddress(place) {
+                lat = place.geometry.location.lat();
+                lng = place.geometry.location.lng();
+                document.getElementById('lat').value = lat;
+                document.getElementById('lng').value = lng;
+                const addressNameFormat = {
+                    'street_number': 'short_name',
+                    'route': 'long_name',
+                    'locality': 'long_name',
+                    'administrative_area_level_1': 'short_name',
+                    'country': 'long_name',
+                    'postal_code': 'short_name',
+                };
+                const getAddressComp = function (type) {
+                    for (const component of place.address_components) {
+                        if (component.types[0] === type) {
+                            return component[addressNameFormat[type]];
+                        }
+                    }
+                    return '';
+                };
+                document.getElementById('location').value = getAddressComp('street_number') + ' '
+                    + getAddressComp('route');
+                for (const component of componentForm) {
+                    if (component !== 'location') {
+                        document.getElementById(component).value = getAddressComp(component);
+                    }
+                }
+            }
+
+            function renderAddress(place) {
+                map.setCenter(place.geometry.location);
+                marker.setPosition(place.geometry.location);
+                marker.setVisible(true);
+            }
+        }
+
+    </script>
+</head>
+<body>
+<div class="card-container">
+    <div class="panel">
+        <div>
+            <img class="sb-title-icon" src="https://fonts.gstatic.com/s/i/googlematerialicons/location_pin/v5/24px.svg"
+                 alt="">
+            <span class="sb-title">Select Your Address</span>
+        </div>
+        <form method="post" action="/add_address/">
+            {% csrf_token %}
+            <input type="text" placeholder="Address" id="location" name="location"/>
+            <br>
+            <input type="text" placeholder="Address2 (optional)" name="landmark"/>
+            <br>
+            <input type="text" placeholder="City" id="locality" name="locality"/>
+            <br>
+
+            <input type="text" class="input" placeholder="State/Province" id="administrative_area_level_1"
+                   name="administrative_area_level_1"/>
+            <br>
+            <input type="text" class="input" placeholder="Zip/Postal code" id="postal_code"
+                   name="postal_code"/>
+            <br>
+            <input type="text" placeholder="Country" id="country" name="country"/>
+            <input type="hidden" id="lat" name="lat" value="">
+            <input type="hidden" id="lng" name="lng" value="">
+            <br>
+            <button class="button-cta" type="submit">Save address</button>
+        </form>
+    </div>
+    <div class="map" id="map"></div>
+</div>
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR__API__KEY&libraries=places&callback=initMap&solution_channel=GMP_QB_addressselection_v1_cABC"
+        async defer></script>
+</body>
+</html>
